@@ -13,7 +13,7 @@ const Signup = ({ goToScreen }) => {
 
   const handleSignup = async () => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
 
       // Add user data to Firestore 'users' collection (without storing password)
@@ -24,7 +24,7 @@ const Signup = ({ goToScreen }) => {
       });
 
       Alert.alert('Signup Successful', `Welcome ${username}!`);
-      goToScreen("Dashboard");
+      goToScreen("Login");
     } catch (error) {
       Alert.alert('Signup Failed', error.message);
     }

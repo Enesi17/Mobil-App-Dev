@@ -6,8 +6,14 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 const Login = ({ goToScreen }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
 
   const handleLogin = () => {
+    if (!email || !password) {
+      Alert.alert('Login Failed', 'Please enter both email and password.');
+      return;
+    }
+  
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
@@ -15,13 +21,25 @@ const Login = ({ goToScreen }) => {
         goToScreen("Dashboard");
       })
       .catch((error) => {
-        Alert.alert('Login Failed', error.message);
+        let errorMessage = 'An error occurred. Please try again.';
+        if (error.code === 'auth/invalid-email') {
+          errorMessage = 'Invalid email format.';
+          setError(true);
+        } else if (error.code === 'auth/user-not-found') {
+          errorMessage = 'No account found with this email.';
+          setError(true);
+        } else if (error.code === 'auth/wrong-password') {
+          errorMessage = 'Incorrect password. Please try again.';
+          setError(true);
+        }
+        Alert.alert('Login Failed', errorMessage);
       });
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome Back!</Text>
+      {error && <Text style={styles.error}>A problem appeared</Text>}
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -101,6 +119,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textDecorationLine: 'underline',
   },
+  error:{
+    color: '#f00'
+  }
 });
 
 export default Login;

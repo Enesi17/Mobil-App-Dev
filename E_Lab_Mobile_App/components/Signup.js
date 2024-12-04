@@ -13,13 +13,13 @@ const Signup = ({ goToScreen }) => {
 
   const handleSignup = async () => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth,email, password);
+      const userCredential = await createUserWithEmailAndPassword( auth, email, password);
       const user = userCredential.user;
 
       // Add user data to Firestore 'users' collection (without storing password)
       await setDoc(doc(firestore, `users/${user.uid}`), {
         email: user.email,
-        password: user.password,
+        password: password,
         username: username,
       });
 

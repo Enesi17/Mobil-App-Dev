@@ -1,46 +1,45 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
-import { app, auth } from '../firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { auth } from '../firebase.js';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
-const firestore = getFirestore();
-
-const Signup = ({ goToScreen }) => {
+const Login = ({ goToScreen }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
+  const [error, setError] = useState(false);
 
-  const handleSignup = async () => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth,email, password);
-      const user = userCredential.user;
-
-      // Add user data to Firestore 'users' collection (without storing password)
-      await setDoc(doc(firestore, `users/${user.uid}`), {
-        email: user.email,
-        password: user.password,
-        username: username,
-      });
-
-      Alert.alert('Signup Successful', `Welcome ${username}!`);
-      goToScreen("Login");
-    } catch (error) {
-      Alert.alert('Signup Failed', error.message);
+  const handleLogin = () => {
+    if (!email || !password) {
+      Alert.alert('Login Failed', 'Please enter both email and password.');
+      return;
     }
+  
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        const user = userCredential.user;
+        Alert.alert('Login Successful', `Welcome ${user.email}!`);
+        goToScreen("Dashboard");
+      })
+      .catch((error) => {
+        let errorMessage = 'An error occurred. Please try again.';
+        if (error.code === 'auth/invalid-email') {
+          errorMessage = 'Invalid email format.';
+          setError(true);
+        } else if (error.code === 'auth/user-not-found') {
+          errorMessage = 'No account found with this email.';
+          setError(true);
+        } else if (error.code === 'auth/wrong-password') {
+          errorMessage = 'Incorrect password. Please try again.';
+          setError(true);
+        }
+        Alert.alert('Login Failed', errorMessage);
+      });
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        value={username}
-        onChangeText={(text) => setUsername(text)}
-        autoCapitalize="none"
-        placeholderTextColor="#888"
-      />
+      <Text style={styles.title}>Welcome Back!</Text>
+      {error && <Text style={styles.error}>A problem appeared</Text>}
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -58,13 +57,12 @@ const Signup = ({ goToScreen }) => {
         secureTextEntry
         placeholderTextColor="#888"
       />
-      
-      <TouchableOpacity style={styles.button} onPress={handleSignup}>
-        <Text style={styles.buttonText}>Sign Up</Text>
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+        <Text style={styles.buttonText}>Log In</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity onPress={() => goToScreen("Login")}>
-        <Text style={styles.linkText}>Already have an account? Log in</Text>
+
+      <TouchableOpacity onPress={() => goToScreen("Signup")}>
+        <Text style={styles.linkText}>Don’t have an account? Register</Text>
       </TouchableOpacity>
     </View>
   );
@@ -121,6 +119,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textDecorationLine: 'underline',
   },
+  error:{
+    color: '#f00'
+  }
 });
 
-export default Signup;
+export default Login;

@@ -5,6 +5,10 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import DashboardUser from './components/DashboardUser';
 import DashboardAdmin from './components/DashboardAdmin';
+import AddResult from './components/AddResult';
+import AddPatient from './components/AddPatient';
+import AddResultGuide from './components/AddResultGuide';
+
 import { auth } from './firebase';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -88,6 +92,15 @@ const App = () => {
       break;
     case "Dashboard":
       displayedScreen = isAdmin ? <DashboardAdmin goToScreen={goToScreen} /> : <DashboardUser goToScreen={goToScreen} />;
+      break;
+    case "AddPatient":
+      displayedScreen = <AddPatient goToScreen={goToScreen} />;
+      break;
+    case "AddResultGuide":
+      displayedScreen = <AddResultGuide goToScreen={goToScreen} />;
+      break;
+    case "AddResult":
+      displayedScreen = <AddResult goToScreen={goToScreen} />;
       break;
     default:
       displayedScreen = <Home goToScreen={goToScreen} />;

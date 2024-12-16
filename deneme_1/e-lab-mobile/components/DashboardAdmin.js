@@ -31,7 +31,7 @@ const DashboardAdmin = ({ goToScreen }) => {
           <Text style={styles.patientText}>
             {item.name} (Age: {item.age}) - {item.recentTest}
           </Text>
-          <Text style={{ fontSize: 50, color: arrowColor }}>{arrow}</Text> {/* Larger arrow font */}
+          <Text style={{ fontSize: 50, color: arrowColor }}>{arrow}</Text>
         </View>
       </View>
     );
@@ -52,10 +52,16 @@ const DashboardAdmin = ({ goToScreen }) => {
         keyExtractor={(item) => item.id}
         style={styles.patientList}
       />
-      <TouchableOpacity style={styles.button} onPress={() => goToScreen('GuideCreation')}>
-        <Text style={styles.buttonText}>Create New Guide</Text>
+      {/* Add buttons for the new functionalities */}
+      <TouchableOpacity style={styles.button} onPress={() => goToScreen('AddResultGuide')}>
+        <Text style={styles.buttonText}>Add Result Guide</Text>
       </TouchableOpacity>
-
+      <TouchableOpacity style={styles.button} onPress={() => goToScreen('AddPatient')}>
+        <Text style={styles.buttonText}>Add Patient</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.button} onPress={() => goToScreen('AddResult')}>
+        <Text style={styles.buttonText}>Add Result</Text>
+      </TouchableOpacity>
       <Logout goToScreen={goToScreen} />
     </View>
   );
@@ -113,6 +119,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
+    marginBottom: 10, // Space between buttons
   },
   buttonText: {
     color: '#fff',

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import Logout from './Logout';
+import { auth } from '../firebase';
 
 const DashboardUser = ({ goToScreen }) => {
   const [search, setSearch] = useState('');
@@ -41,6 +42,21 @@ const DashboardUser = ({ goToScreen }) => {
     );
   };
 
+  const resetPassword = async () => {
+    const user = auth.currentUser;
+    if (user && user.email) {
+      try {
+        await auth.sendPasswordResetEmail(user.email);
+        alert('Password reset email sent successfully!');
+      } catch (error) {
+        console.error('Error sending password reset email:', error);
+        alert('Failed to send password reset email. Please try again.');
+      }
+    } else {
+      alert('No logged-in user found!');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>User Dashboard</Text>
@@ -58,6 +74,9 @@ const DashboardUser = ({ goToScreen }) => {
       />
       <TouchableOpacity style={styles.button} onPress={() => goToScreen('Home')}>
         <Text style={styles.buttonText}>Manage Profile</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.button} onPress={resetPassword}>
+        <Text style={styles.buttonText}>Reset Password</Text>
       </TouchableOpacity>
       <Logout goToScreen={goToScreen} />
     </View>
@@ -120,6 +139,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
+    marginBottom: 10,
   },
   buttonText: {
     color: '#fff',

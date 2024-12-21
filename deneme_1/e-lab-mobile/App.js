@@ -23,7 +23,7 @@ const App = () => {
   const goToScreen = (screenName) => {
     setCurrentScreen(screenName);
   };
-
+  // checking the user
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);

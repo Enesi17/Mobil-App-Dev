@@ -8,12 +8,14 @@ const Login = ({ goToScreen }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
 
+  // This is the main function for login
   const handleLogin = () => {
     if (!email || !password) {
       Alert.alert('Login Failed', 'Please enter both email and password.');
       return;
     }
-  
+    
+    // using firebase function for login
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
@@ -27,6 +29,7 @@ const Login = ({ goToScreen }) => {
         
       })
       .catch((error) => {
+        // debugging
         let errorMessage = 'An error occurred. Please try again.';
         if (error.code === 'auth/invalid-email') {
           errorMessage = 'Invalid email format.';
@@ -74,6 +77,7 @@ const Login = ({ goToScreen }) => {
   );
 };
 
+// This style is on the same flow as the other components
 const styles = StyleSheet.create({
   container: {
     flex: 1,

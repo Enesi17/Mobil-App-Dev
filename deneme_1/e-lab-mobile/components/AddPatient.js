@@ -11,7 +11,8 @@ const AddPatient = ({ goToScreen }) => {
     const [password, setPassword] = useState('');
     const [username, setUsername] = useState('');
     const [dateOfBirth, setDateOfBirth] = useState('');
-  
+
+    
     const isValidDate = (date) => /^\d{4}-\d{2}-\d{2}$/.test(date);
   
     const handleSignup = async () => {

@@ -1,26 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { auth, firestore, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from '../firebase';
 import Logout from './Logout';
-import { auth } from '../firebase';
+import ResetPasswordForm from './ResetPasswordForm';
 
 const DashboardUser = ({ goToScreen }) => {
   const [search, setSearch] = useState('');
-  const testResults = [
-    { id: '1', test: 'IgA', result: 'Normal', date: '2024-10-01' },
-    { id: '2', test: 'IgM', result: 'High', date: '2024-10-15' },
-    { id: '3', test: 'IgG', result: 'Low', date: '2024-11-01' },
-    { id: '4', test: 'IgA', result: 'Normal', date: '2024-02-01' },
-    { id: '5', test: 'IgM', result: 'Low', date: '2024-10-15' },
-    { id: '6', test: 'IgG', result: 'Low', date: '2023-12-01' },
-    { id: '7', test: 'IgA', result: 'High', date: '2023-10-01' },
-    { id: '8', test: 'IgM', result: 'High', date: '2023-10-15' },
-    { id: '9', test: 'IgG', result: 'High', date: '2023-11-01' },
-  ];
+  const [testResults, setTestResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showChangePasswordForm, setShowChangePasswordForm] = useState(false);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      try {
+        const user = auth.currentUser;
+
+        if (user) {
+          const username = user.displayName || user.email.split('@')[0];
+          console.log('Fetching results for username:', username);
+
+          const q = query(collection(firestore, 'results'), where('username', '==', username));
+
+          const unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+              const fetchedResults = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+              }));
+              setTestResults(fetchedResults);
+              setLoading(false);
+            },
+            (error) => {
+              console.error('Error fetching results:', error);
+              setLoading(false);
+            }
+          );
+
+          return () => unsubscribe();
+        } else {
+          console.error('No user is logged in!');
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Unexpected error:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchResults();
+  }, []);
 
   const filteredResults = testResults.filter(
     (item) =>
-      item.test.toLowerCase().includes(search.toLowerCase()) ||
-      item.date.includes(search)
+      item.value_checked.toLowerCase().includes(search.toLowerCase()) ||
+      item.result.toLowerCase().includes(search.toLowerCase())
   );
 
   const renderItem = ({ item }) => {
@@ -34,14 +69,17 @@ const DashboardUser = ({ goToScreen }) => {
     return (
       <View style={[styles.resultItem, styles[item.result.toLowerCase()]]}>
         <View style={styles.resultContent}>
-          <Text style={styles.resultText}>{item.test} - {item.result}</Text>
+          <Text style={styles.resultText}>
+            {item.value_checked} - {item.result}
+          </Text>
           <Text style={{ fontSize: 50, color: arrowColor }}>{arrow}</Text>
         </View>
-        <Text style={styles.resultDate}>{item.date}</Text>
+        <Text style={styles.resultDate}>{item.date || 'No Date'}</Text>
       </View>
     );
   };
 
+  // Reset password via email
   const resetPassword = async () => {
     const user = auth.currentUser;
     if (user && user.email) {
@@ -50,34 +88,66 @@ const DashboardUser = ({ goToScreen }) => {
         alert('Password reset email sent successfully!');
       } catch (error) {
         console.error('Error sending password reset email:', error);
-        alert('Failed to send password reset email. Please try again.');
+        alert('Failed to send password reset email. You can manually change your password.');
+        setShowChangePasswordForm(true);
       }
     } else {
       alert('No logged-in user found!');
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!auth.currentUser) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Please log in to access your dashboard.</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>User Dashboard</Text>
       <TextInput
         style={styles.input}
-        placeholder="Search Test or Date"
+        placeholder="Search Test or Result"
         value={search}
         onChangeText={(text) => setSearch(text)}
       />
-      <FlatList
-        data={filteredResults}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        style={styles.resultList}
-      />
-      <TouchableOpacity style={styles.button} onPress={() => goToScreen('Home')}>
-        <Text style={styles.buttonText}>Manage Profile</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={resetPassword}>
-        <Text style={styles.buttonText}>Reset Password</Text>
-      </TouchableOpacity>
+      {filteredResults.length === 0 ? (
+        <Text>No results found.</Text>
+      ) : (
+        <FlatList
+          data={filteredResults}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          style={styles.resultList}
+        />
+      )}
+      {!showChangePasswordForm ? (
+        <>
+          <TouchableOpacity style={styles.button} onPress={() => goToScreen('Home')}>
+            <Text style={styles.buttonText}>Manage Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={resetPassword}>
+            <Text style={styles.buttonText}>Reset Password</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View>
+          <ResetPasswordForm />
+          <TouchableOpacity style={styles.cancelButton} onPress={() => setShowChangePasswordForm(false)}>
+              <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <Logout goToScreen={goToScreen} />
     </View>
   );
@@ -141,10 +211,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  cancelButton: {
+    backgroundColor: '#FF0000',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 10,
+    marginRight: 50,
+    marginLeft: 50,
+    marginTop: 20,
+  },
   buttonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  form: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+  },
+  formTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
 });
 

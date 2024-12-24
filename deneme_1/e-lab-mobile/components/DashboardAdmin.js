@@ -1,58 +1,73 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { firestore } from '../firebase';
 import Logout from './Logout';
 
 const DashboardAdmin = ({ goToScreen }) => {
-  const [search, setSearch] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const patients = [
-    { id: '1', name: 'John Doe', age: 35, recentTest: 'Normal' },
-    { id: '2', name: 'Jane Smith', age: 28, recentTest: 'High' },
-    { id: '3', name: 'Emily Davis', age: 42, recentTest: 'Low' },
-  ];
+  useEffect(() => {
+    const fetchResults = async () => {
+      try {
+        // Fetch all results from the 'results' collection, ordered by date (latest first)
+        const resultsQuery = query(collection(firestore, 'results'), orderBy('date', 'desc'));
+        const resultsSnapshot = await getDocs(resultsQuery);
 
-  const filteredPatients = patients.filter(
-    (item) =>
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.age.toString().includes(search)
-  );
+        const fetchedResults = resultsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setResults(fetchedResults);
+      } catch (error) {
+        console.error('Error fetching results from Firestore:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResults();
+  }, []);
 
   const renderItem = ({ item }) => {
     const arrow =
-      item.recentTest === 'High' ? '↑' :
-      item.recentTest === 'Low' ? '↓' : '↔';
+      item.result === 'High' ? '↑' :
+      item.result === 'Low' ? '↓' : '↔';
     const arrowColor =
-      item.recentTest === 'High' ? '#FF0000' :
-      item.recentTest === 'Low' ? '#00FF00' : '#0000FF';
+      item.result === 'High' ? '#FF0000' :
+      item.result === 'Low' ? '#00FF00' : '#0000FF';
 
     return (
-      <View style={[styles.patientItem, styles[item.recentTest.toLowerCase()]]}>
-        <View style={styles.patientContent}>
-          <Text style={styles.patientText}>
-            {item.name} (Age: {item.age}) - {item.recentTest}
+      <View style={[styles.resultItem, styles[item.result?.toLowerCase()]]}>
+        <View style={styles.resultContent}>
+          <Text style={styles.resultText}>
+            {item.username || 'Unknown User'} - {item.value_checked || 'N/A'} - {item.result}
           </Text>
           <Text style={{ fontSize: 50, color: arrowColor }}>{arrow}</Text>
         </View>
+        <Text style={styles.resultDate}>{item.date || 'No Date'}</Text>
       </View>
     );
   };
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Admin Dashboard</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Search by Patient Name or Age"
-        value={search}
-        onChangeText={(text) => setSearch(text)}
-      />
       <FlatList
-        data={filteredPatients}
+        data={results}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        style={styles.patientList}
+        style={styles.resultList}
       />
-      {/* Add buttons for the new functionalities */}
       <TouchableOpacity style={styles.button} onPress={() => goToScreen('AddResultGuide')}>
         <Text style={styles.buttonText}>Add Result Guide</Text>
       </TouchableOpacity>
@@ -78,32 +93,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
   },
-  input: {
-    height: 50,
-    backgroundColor: '#fff',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 15,
+  resultList: {
     marginBottom: 20,
   },
-  patientList: {
-    marginBottom: 20,
-  },
-  patientItem: {
+  resultItem: {
     padding: 15,
     borderRadius: 8,
     marginBottom: 10,
   },
-  patientContent: {
+  resultContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  patientText: {
+  resultText: {
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
+  },
+  resultDate: {
+    fontSize: 14,
+    color: '#666',
   },
   low: {
     backgroundColor: '#ffcccc',
@@ -119,7 +129,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 10, // Space between buttons
+    marginBottom: 10,
   },
   buttonText: {
     color: '#fff',

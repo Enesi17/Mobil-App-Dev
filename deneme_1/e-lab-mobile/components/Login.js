@@ -18,7 +18,13 @@ const Login = ({ goToScreen }) => {
       .then((userCredential) => {
         const user = userCredential.user;
         Alert.alert('Login Successful', `Welcome ${user.email}!`);
-        goToScreen("Dashboard");
+        if (user.email.includes("admin")) {
+          goToScreen("AdminDashboard");
+        } else {
+          goToScreen("UserDashboard");
+        }
+        
+        
       })
       .catch((error) => {
         let errorMessage = 'An error occurred. Please try again.';

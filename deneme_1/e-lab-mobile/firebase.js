@@ -1,7 +1,14 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID, FIREBASE_STORAGE_BUCKET, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_APP_ID } from '@env';
+import { getDatabase } from 'firebase/database';
+import { 
+  FIREBASE_API_KEY, 
+  FIREBASE_AUTH_DOMAIN, 
+  FIREBASE_PROJECT_ID, 
+  FIREBASE_STORAGE_BUCKET, 
+  FIREBASE_MESSAGING_SENDER_ID, 
+  FIREBASE_APP_ID } from '@env';
 
 const firebaseConfig = {
   apiKey: FIREBASE_API_KEY,
@@ -15,13 +22,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
+const db = getDatabase(app);
 
-setPersistence(auth, browserSessionPersistence)
-  .then(() => {
-    console.log('Firebase authentication persistence is set to session');
-  })
-  .catch((error) => {
-    console.error('Failed to set auth persistence:', error);
-  });
 
-export { app, auth, firestore };
+export { app, auth, firestore, db };

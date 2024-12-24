@@ -64,8 +64,9 @@ const DashboardUser = ({ goToScreen }) => {
       item.result === 'Low' ? '↓' : '↔';
     const arrowColor =
       item.result === 'High' ? '#FF0000' :
-      item.result === 'Low' ? '#00FF00' : '#0000FF';
-
+      item.result === 'Low' ? '#ADD8E6' : 
+      '#0000FF';
+  
     return (
       <View style={[styles.resultItem, styles[item.result.toLowerCase()]]}>
         <View style={styles.resultContent}>

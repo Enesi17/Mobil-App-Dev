@@ -1,125 +1,191 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { firestore } from '../firebase';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Picker } from 'react-native';
+import { firestore, db } from '../firebase';
+import { getDocs, query, collection, where, addDoc } from 'firebase/firestore';
+import { ref, get } from "firebase/database";
 
-const AddResult = ({ goToScreen }) => {
-  const [patientName, setPatientName] = useState('');
-  const [dob, setDob] = useState('');
-  const [parameter, setParameter] = useState('');
+const AddResult = ({goToScreen}) => {
+  const [email, setEmail] = useState('');
+  const [selectedParameter, setSelectedParameter] = useState('');
   const [value, setValue] = useState('');
+  const [result, setResult] = useState('');
+  const [doctorDecision, setDoctorDecision] = useState('');
 
-  // Function to fetch and evaluate the result based on result guides
-  const evaluateResult = async (parameter, value) => {
+  const checkPatientResult = async () => {
     try {
-      // Fetch all result guides for the given parameter
-      const guidesSnapshot = await firestore
-        .collection('resultGuides')
-        .where('parameter', '==', parameter)
-        .get();
+      console.log("Starting patient result check...");
 
-      if (guidesSnapshot.empty) {
-        console.error('No result guides found for parameter:', parameter);
-        return 'No guides available';
+      const userQuery = query(collection(firestore, "users"), where("email", "==", email));
+      const userSnapshot = await getDocs(userQuery);
+
+      if (userSnapshot.empty) {
+        alert("No patient found with this email");
+        console.log("No patient found for email:", email);
+        return;
       }
 
-      const guides = [];
-      guidesSnapshot.forEach((doc) => guides.push(doc.data()));
+      const userData = userSnapshot.docs[0].data();
+      console.log("User Data:", userData);
 
-      // Initialize counters for the decision
-      const resultCounts = { low: 0, normal: 0, high: 0 };
+      const dob = new Date(`${userData.date_of_birth}T00:00:00`);
+      if (isNaN(dob.getTime())) {
+        throw new Error("Invalid Date of Birth value.");
+      }
 
-      // Iterate through guides and compare the value
-      guides.forEach((guide) => {
-        const { ageGroups, priority } = guide;
+      console.log("Parsed Date of Birth:", dob);
 
-        // Find the matching age group based on dob (age in months calculation)
-        const dobDate = new Date(dob);
-        const ageInMonths = Math.floor((Date.now() - dobDate) / (1000 * 60 * 60 * 24 * 30.44)); // Approx. months
-        const matchingAgeGroup = ageGroups.find(
-          (group) => ageInMonths >= group.minAge && ageInMonths <= group.maxAge
-        );
+      const ageInDays = Math.floor((Date.now() - dob.getTime()) / (1000 * 60 * 60 * 24));
+      console.log("Age in Days:", ageInDays);
 
-        if (matchingAgeGroup) {
-          const { ranges } = matchingAgeGroup;
-          if (value <= ranges.low) {
-            resultCounts.low += priority || 1; // Use priority for weighted decisions
-          } else if (value >= ranges.high) {
-            resultCounts.high += priority || 1;
-          } else if (value >= ranges.normal[0] && value <= ranges.normal[1]) {
-            resultCounts.normal += priority || 1;
+      const guides = ["kl1", "kl2", "kl3"];
+      const valueToCheck = parseFloat(value);
+      const results = { Low: 0, Normal: 0, High: 0 };
+
+      for (const guide of guides) {
+        console.log("Checking guide:", guide);
+
+        const dataRef = ref(db, `${guide}/${selectedParameter}`);
+        const snapshot = await get(dataRef);
+        const data = snapshot.val();
+
+        if (!data) {
+          console.log("No data found for path:", `${guide}/${selectedParameter}`);
+          continue;
+        }
+
+        console.log("Fetched Data:", data);
+
+        let matchedRange = null;
+        let matchedMin = null;
+        let matchedMax = null;
+
+        for (const ageRange in data) {
+          const [minAgeStr, maxAgeStr] = ageRange.split("_").map((range) => {
+            const [value, unit] = range.split("-");
+            return unit === "days" ? parseInt(value) : parseInt(value) * 30;
+          });
+
+          const minAge = minAgeStr;
+          const maxAge = maxAgeStr;
+
+          if (ageInDays >= minAge && ageInDays <= maxAge) {
+            matchedRange = ageRange;
+            matchedMin = data[ageRange].min;
+            matchedMax = data[ageRange].max;
+            break;
           }
         }
-      });
 
-      // Determine the majority decision
-      const result = Object.entries(resultCounts).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
-      return result;
+        if (!matchedRange) {
+          const lastRangeKey = Object.keys(data).pop();
+          const lastRange = data[lastRangeKey];
+          matchedMin = lastRange.min;
+          matchedMax = lastRange.max;
+          matchedRange = lastRangeKey;
+        }
+
+        console.log(`Matched Range: ${matchedRange}, Min: ${matchedMin}, Max: ${matchedMax}`);
+
+        if (valueToCheck < matchedMin) {
+          results.Low += 1;
+        } else if (valueToCheck > matchedMax) {
+          results.High += 1;
+        } else {
+          results.Normal += 1;
+        }
+      }
+
+      const totalVotes = Object.entries(results).map(([key, count]) => `${key}: ${count}`);
+      setResult(`Checking results: ${totalVotes.join(", ")}. Please decide.`);
+      alert(`Voting results: ${totalVotes.join(", ")}. Please decide if adjustments are needed.`);
     } catch (error) {
-      console.error('Error evaluating result:', error);
-      return 'Error in evaluation';
+      console.error("Error fetching data:", error.message, error.stack);
+      alert(`Error: ${error.message}`);
     }
   };
 
-  // Save result to Firestore with evaluation
-  const saveResult = async () => {
-    const evaluatedResult = await evaluateResult(parameter, parseFloat(value));
-    if (evaluatedResult === 'Error in evaluation' || evaluatedResult === 'No guides available') {
-      alert(evaluatedResult);
-      return;
-    }
-
+  const saveDoctorDecision = async () => {
     try {
-      await firestore.collection('tests').add({
-        patientName,
-        dob,
-        parameter,
-        value: parseFloat(value),
-        result: evaluatedResult, // Save the evaluated result
-        status: 'pending',
-        createdAt: new Date(),
+      if (!doctorDecision) {
+        alert('Please select a decision before saving.');
+        return;
+      }
+  
+      // Use modular SDK syntax for Firestore
+      await addDoc(collection(firestore, 'results'), {
+        username: email.split('@')[0],
+        value_checked: selectedParameter,
+        result: doctorDecision,
+        date: new Date().toISOString().split('T')[0],
       });
-      alert('Result added successfully!');
+  
+      alert('Decision saved successfully!');
+      setDoctorDecision('');
+      goToScreen('AdminDashboard');
     } catch (error) {
-      console.error('Error saving result:', error);
-      alert('Error adding result');
+      console.error('Error saving decision:', error);
+      alert('Error saving the decision. Please try again.');
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Add Result</Text>
+      <Text style={styles.title}>Evaluate Patient Result</Text>
+
       <TextInput
         style={styles.input}
-        placeholder="Patient Name"
-        value={patientName}
-        onChangeText={setPatientName}
+        placeholder="Patient Email"
+        value={email}
+        onChangeText={setEmail}
       />
+
+      <Picker
+        selectedValue={selectedParameter}
+        onValueChange={(itemValue) => setSelectedParameter(itemValue)}
+        style={styles.input}
+      >
+        <Picker.Item label="Select Parameter" value="" />
+        <Picker.Item label="IgA" value="IgA" />
+        <Picker.Item label="IgM" value="IgM" />
+        <Picker.Item label="IgG" value="IgG" />
+        <Picker.Item label="IgG1" value="IgG1" />
+        <Picker.Item label="IgG2" value="IgG2" />
+        <Picker.Item label="IgG3" value="IgG3" />
+        <Picker.Item label="IgG4" value="IgG4" />
+      </Picker>
+
       <TextInput
         style={styles.input}
-        placeholder="Date of Birth (YYYY-MM-DD)"
-        value={dob}
-        onChangeText={setDob}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Parameter (e.g., IgA)"
-        value={parameter}
-        onChangeText={setParameter}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Value"
+        placeholder="Value to Check"
         value={value}
         keyboardType="numeric"
         onChangeText={setValue}
       />
-      <TouchableOpacity style={styles.button} onPress={saveResult}>
-        <Text style={styles.buttonText}>Save Result</Text>
+
+      <TouchableOpacity style={styles.button} onPress={checkPatientResult}>
+        <Text style={styles.buttonText}>Evaluate</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => goToScreen('Dashboard')}>
-              <Text style={styles.buttonText}>Back</Text>
-      </TouchableOpacity>
+      {result !== '' && (
+        <View style={styles.decisionContainer}>
+          <Text style={styles.resultText}>{result}</Text>
+
+          <Picker
+            selectedValue={doctorDecision}
+            onValueChange={(itemValue) => setDoctorDecision(itemValue)}
+            style={styles.input}
+          >
+            <Picker.Item label="Select Final Decision" value="" />
+            <Picker.Item label="Low" value="Low" />
+            <Picker.Item label="Normal" value="Normal" />
+            <Picker.Item label="High" value="High" />
+          </Picker>
+
+          <TouchableOpacity style={styles.button} onPress={saveDoctorDecision}>
+            <Text style={styles.buttonText}>Save Decision</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -152,6 +218,18 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  resultText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 20,
+    color: '#007AFF',
+  },
+  decisionContainer: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#fff',
+    borderRadius: 8,
   },
 });
 

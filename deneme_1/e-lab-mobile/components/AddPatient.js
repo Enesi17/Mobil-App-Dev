@@ -29,7 +29,6 @@ const AddPatient = ({ goToScreen }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
     
-        // Use Firebase Auth UID as the document ID
         await setDoc(doc(firestore, `users/${user.uid}`), {
           email: user.email,
           username: username,
@@ -40,7 +39,6 @@ const AddPatient = ({ goToScreen }) => {
         Alert.alert('Registration Successful');
         goToScreen('AdminDashboard');
       } catch (error) {
-        console.error('Registration Error:', error.message);
         Alert.alert('Registration Failed', error.message);
       }
     };

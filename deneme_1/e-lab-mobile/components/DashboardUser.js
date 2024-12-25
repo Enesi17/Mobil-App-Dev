@@ -134,7 +134,7 @@ const DashboardUser = ({ goToScreen }) => {
       )}
       {!showChangePasswordForm ? (
         <>
-          <TouchableOpacity style={styles.button} onPress={() => goToScreen('Home')}>
+          <TouchableOpacity style={styles.button} onPress={() => goToScreen('ManageProfile')}>
             <Text style={styles.buttonText}>Manage Profile</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={resetPassword}>
@@ -143,7 +143,7 @@ const DashboardUser = ({ goToScreen }) => {
         </>
       ) : (
         <View>
-          <ResetPasswordForm />
+          <ResetPasswordForm goToScreen={goToScreen} />
           <TouchableOpacity style={styles.cancelButton} onPress={() => setShowChangePasswordForm(false)}>
               <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>

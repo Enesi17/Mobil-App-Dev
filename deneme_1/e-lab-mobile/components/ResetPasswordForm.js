@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { auth, firestore, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from '../firebase';
-import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { auth } from '../firebase';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 
-const ResetPasswordForm = ({ onClose }) => {
+const ResetPasswordForm = ({ goToScreen }) => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -13,44 +13,35 @@ const ResetPasswordForm = ({ onClose }) => {
       alert('New password and confirmation do not match!');
       return;
     }
-  
+
     try {
       const user = auth.currentUser;
-  
-      if (user) {
-        // Reauthenticate the user
-        const credential = EmailAuthProvider.credential(user.email, oldPassword);
-        await reauthenticateWithCredential(user, credential);
-  
-        // Update password in Firebase Authentication
-        await updatePassword(user, newPassword);
-  
-        // Query Firestore to find the user's document by email
-        const q = query(collection(firestore, 'users'), where('email', '==', user.email));
-        const querySnapshot = await getDocs(q);
-  
-        if (!querySnapshot.empty) {
-          // Loop through the results (though there should be only one in most cases)
-          const docSnapshots = querySnapshot.docs;
-          if (docSnapshots.length === 1) {
-            const userDocRef = docSnapshots[0].ref; // Reference to the matched document
-            await updateDoc(userDocRef, {
-              password: newPassword, // Ideally, this should be a hashed password
-            });
-            alert('Password updated successfully in both Authentication and Firestore!');
-          } else {
-            console.error('Multiple documents found for the same email. Ensure email uniqueness.');
-            alert('Failed to update password due to multiple matching records.');
-          }
-        } else {
-          alert('User document not found in Firestore!');
-        }
-      } else {
+
+      if (!user) {
         alert('No logged-in user found!');
+        return;
       }
+
+      // Reauthenticate the user
+      const credential = EmailAuthProvider.credential(user.email, oldPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password in Firebase Authentication
+      await updatePassword(user, newPassword);
+
+      alert('Password updated successfully!');
+      
+      // Redirect to Login screen
+      goToScreen('Login');
     } catch (error) {
-      console.error('Error updating password:', error);
-      alert('Failed to update password. Please try again.');
+      console.error('Error updating password:', error.message);
+      if (error.code === 'auth/wrong-password') {
+        alert('Incorrect old password!');
+      } else if (error.code === 'auth/weak-password') {
+        alert('New password is too weak!');
+      } else {
+        alert('Failed to update password. Please try again.');
+      }
     }
   };
 
@@ -112,13 +103,6 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  cancelButton: {
-    backgroundColor: '#FF0000',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',

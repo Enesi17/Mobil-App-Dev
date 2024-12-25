@@ -8,6 +8,7 @@ import DashboardAdmin from './components/DashboardAdmin';
 import AddResult from './components/AddResult';
 import AddPatient from './components/AddPatient';
 import AddResultGuide from './components/AddResultGuide';
+import ManageProfile from './components/ManageProfile';
 
 import { auth } from './firebase';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
@@ -73,6 +74,9 @@ const App = () => {
       break;
     case "AddResult":
       displayedScreen = <AddResult goToScreen={goToScreen} />;
+      break;
+    case "ManageProfile":
+      displayedScreen = <ManageProfile goToScreen={goToScreen} />;
       break;
     default:
       displayedScreen = <Home goToScreen={goToScreen} />;

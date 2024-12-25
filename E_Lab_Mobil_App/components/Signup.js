@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
-import { app, auth } from '../firebase';
+import { auth } from '../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
@@ -10,25 +10,42 @@ const Signup = ({ goToScreen }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+
+  const isValidDate = (date) => /^\d{4}-\d{2}-\d{2}$/.test(date);
 
   const handleSignup = async () => {
+    if (!username || !dateOfBirth || !email || !password) {
+      Alert.alert('Signup Failed', 'All fields are required.');
+      return;
+    }
+  
+    if (!isValidDate(dateOfBirth)) {
+      Alert.alert('Signup Failed', 'Date of Birth must be in YYYY-MM-DD format.');
+      return;
+    }
+  
     try {
-      const userCredential = await createUserWithEmailAndPassword( auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
-      
+  
+      // Use Firebase Auth UID as the document ID
       await setDoc(doc(firestore, `users/${user.uid}`), {
         email: user.email,
-        password: password,
         username: username,
+        password: password, // Optional: Consider not storing plaintext passwords
+        date_of_birth: dateOfBirth,
       });
-
+  
       Alert.alert('Signup Successful', `Welcome ${username}!`);
-      goToScreen("Login");
+      goToScreen('Login');
     } catch (error) {
+      console.error('Signup Error:', error.message);
       Alert.alert('Signup Failed', error.message);
     }
   };
+  
+  
 
   return (
     <View style={styles.container}>
@@ -58,12 +75,18 @@ const Signup = ({ goToScreen }) => {
         secureTextEntry
         placeholderTextColor="#888"
       />
-      
+      <TextInput
+        style={styles.input}
+        placeholder="Date of Birth (YYYY-MM-DD)"
+        value={dateOfBirth}
+        onChangeText={(text) => setDateOfBirth(text)}
+        keyboardType="default"
+        placeholderTextColor="#888"
+      />
       <TouchableOpacity style={styles.button} onPress={handleSignup}>
         <Text style={styles.buttonText}>Sign Up</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity onPress={() => goToScreen("Login")}>
+      <TouchableOpacity onPress={() => goToScreen('Login')}>
         <Text style={styles.linkText}>Already have an account? Log in</Text>
       </TouchableOpacity>
     </View>

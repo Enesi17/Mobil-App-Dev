@@ -82,10 +82,10 @@ const AddPatient = ({ goToScreen }) => {
           placeholderTextColor="#888"
         />
         <TouchableOpacity style={styles.button} onPress={handleSignup}>
-          <Text style={styles.buttonText}>Sign Up</Text>
+          <Text style={styles.buttonText}>Register</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => goToScreen('Login')}>
-          <Text style={styles.linkText}>Already have an account? Log in</Text>
+        <TouchableOpacity style={styles.button} onPress={() => goToScreen('AdminDashboard')}>
+          <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
       </View>
     );

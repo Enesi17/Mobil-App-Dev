@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { auth } from './firebase';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+
+// import all the components/screens 
 import Home from './components/Home';
 import Login from './components/Login';
 import Signup from './components/Signup';
@@ -10,37 +15,36 @@ import AddPatient from './components/AddPatient';
 import AddResultGuide from './components/AddResultGuide';
 import ManageProfile from './components/ManageProfile';
 
-import { auth } from './firebase';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
-
+// Getting firestore from Firebase.js
 const firestore = getFirestore();
 
 const App = () => {
+
+  // Initializing screen, default screen is "Home"
   const [currentScreen, setCurrentScreen] = useState("Home");
   const [loading, setLoading] = useState(true);
 
+  // Funtion to navigate through screens
   const goToScreen = (screenName) => {
     setCurrentScreen(screenName);
   };
 
+  // This useEffect will redirect to Login if authentication ends
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (user) {
         const userEmail = user.email;
-        console.log("Logged in user email:", userEmail);
       } else {
-        console.log("No user is logged in, redirecting to Login");
         setCurrentScreen("Login");
       }
-  
       setLoading(false);
     });
   
     return () => unsubscribe();
   }, []);
   
+  // Loading icon while data or screens are loading... 
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -49,6 +53,7 @@ const App = () => {
     );
   }
 
+  // Switch to be able to navigate through screens
   let displayedScreen;
   switch (currentScreen) {
     case "Home":
@@ -78,11 +83,13 @@ const App = () => {
     case "ManageProfile":
       displayedScreen = <ManageProfile goToScreen={goToScreen} />;
       break;
+      //Deafult screen is set to Home
     default:
       displayedScreen = <Home goToScreen={goToScreen} />;
       break;
   }
 
+  // Return will render the screen set
   return (
     <View style={styles.container}>
       {displayedScreen}
@@ -90,6 +97,7 @@ const App = () => {
   );
 };
 
+// Style of App.js
 const styles = StyleSheet.create({
   container: {
     flex: 1,

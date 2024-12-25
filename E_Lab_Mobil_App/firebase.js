@@ -1,7 +1,10 @@
-import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
+// Importing needed functinos from firebase
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 import { initializeApp } from 'firebase/app';
+
+// Importing form env the confidential data for the firebase connection
 import { 
   FIREBASE_API_KEY, 
   FIREBASE_AUTH_DOMAIN, 
@@ -10,6 +13,7 @@ import {
   FIREBASE_MESSAGING_SENDER_ID, 
   FIREBASE_APP_ID } from '@env';
 
+// Firebase connectino 
 const firebaseConfig = {
   apiKey: FIREBASE_API_KEY,
   authDomain: FIREBASE_AUTH_DOMAIN,
@@ -20,10 +24,11 @@ const firebaseConfig = {
   appId: FIREBASE_APP_ID,
 };
 
+// initializing to export needed parts of database
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 const db = getDatabase(app);
 
-
+// Exporting the parts of database
 export { app, auth, firestore, db };

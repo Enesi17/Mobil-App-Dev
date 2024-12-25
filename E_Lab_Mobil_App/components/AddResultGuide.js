@@ -2,33 +2,29 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { db } from '../firebase'; // Import the Realtime Database instance
 import { ref, get, set } from 'firebase/database';
+import * as DocumentPicker from 'expo-document-picker';
 
 const AddResultGuide = ({ goToScreen }) => {
   const [uploadedFileData, setUploadedFileData] = useState(null);
 
-  const handleFileUpload = async (event) => {
+  const selectFile = async () => {
     try {
-      const file = event.target.files[0];
-      if (!file) {
-        Alert.alert('Error', 'No file selected.');
-        return;
-      }
+      const file = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: false,
+      });
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const json = JSON.parse(e.target.result);
-          setUploadedFileData(json);
-          Alert.alert('Success', 'File uploaded and parsed successfully!');
-        } catch (error) {
-          console.error('Error parsing JSON:', error);
-          Alert.alert('Error', 'Invalid JSON file.');
-        }
-      };
-      reader.readAsText(file);
+      if (file.type === 'success') {
+        const response = await fetch(file.uri);
+        const json = await response.json();
+        setUploadedFileData(json);
+        Alert.alert('File Selected', `File name: ${file.name}`);
+      } else {
+        Alert.alert('File Selection Cancelled');
+      }
     } catch (error) {
-      console.error('Error uploading file:', error);
-      Alert.alert('Error', 'Failed to upload file.');
+      console.error('Error selecting file:', error);
+      Alert.alert('Error', 'Failed to select a file.');
     }
   };
 
@@ -66,16 +62,13 @@ const AddResultGuide = ({ goToScreen }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Add Result Guide</Text>
-      <input
-        type="file"
-        accept="application/json"
-        style={styles.fileInput}
-        onChange={handleFileUpload}
-      />
+      <TouchableOpacity style={styles.fileButton} onPress={selectFile}>
+        <Text style={styles.buttonText}>Select File</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={saveGuide}>
         <Text style={styles.buttonText}>Save Guide</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => goToScreen('Dashboard')}>
+      <TouchableOpacity style={styles.button} onPress={() => goToScreen('AdminDashboard')}>
         <Text style={styles.buttonText}>Back</Text>
       </TouchableOpacity>
     </View>
@@ -84,33 +77,41 @@ const AddResultGuide = ({ goToScreen }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 20,
     backgroundColor: '#f2f2f2',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
+    textAlign: 'center',
   },
-  fileInput: {
-    marginBottom: 15,
-    padding: 10,
-    backgroundColor: '#fff',
-    borderColor: '#ccc',
-    borderWidth: 1,
+  fileButton: {
+    backgroundColor: '#007BFF',
+    padding: 15,
     borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
+    width: '100%',
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

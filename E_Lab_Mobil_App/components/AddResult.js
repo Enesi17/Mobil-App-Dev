@@ -182,6 +182,10 @@ const AddResult = ({goToScreen}) => {
         <Text style={styles.buttonText}>Evaluate</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.button} onPress={() => goToScreen('AdminDashboard')}>
+        <Text style={styles.buttonText}>Back</Text>
+      </TouchableOpacity>
+
       {result !== '' && (
         <View style={styles.decisionContainer}>
           <Text style={styles.resultText}>{result}</Text>

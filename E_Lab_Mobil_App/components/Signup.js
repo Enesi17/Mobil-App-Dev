@@ -1,43 +1,55 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
+
+// Importing parts of database
 import { auth } from '../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
+// Getting firestore from Firebase.js
 const firestore = getFirestore();
 
 const Signup = ({ goToScreen }) => {
+
+  // Initializing needed constants
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-
   const isValidDate = (date) => /^\d{4}-\d{2}-\d{2}$/.test(date);
 
+  // Function to Register new users
   const handleSignup = async () => {
-    if (!username || !dateOfBirth || !email || !password) {
+    if (!username || !dateOfBirth || !email || !password || !confirmPassword) {
+      // Control if all fields are filled
       Alert.alert('Signup Failed', 'All fields are required.');
       return;
     }
   
     if (!isValidDate(dateOfBirth)) {
+      // Controling date of birth
       Alert.alert('Signup Failed', 'Date of Birth must be in YYYY-MM-DD format.');
       return;
     }
   
     try {
+
+      // Using a firebase function to register to authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
   
-      // Use Firebase Auth UID as the document ID
+      // Using Firebase Auth UID as the document ID
       await setDoc(doc(firestore, `users/${user.uid}`), {
         email: user.email,
         username: username,
-        password: password, // Optional: Consider not storing plaintext passwords
+        password: password,
         date_of_birth: dateOfBirth,
       });
   
       Alert.alert('Signup Successful', `Welcome ${username}!`);
+
+      // If successful it will redirect to Login screen
       goToScreen('Login');
     } catch (error) {
       console.error('Signup Error:', error.message);
@@ -72,6 +84,14 @@ const Signup = ({ goToScreen }) => {
         placeholder="Password"
         value={password}
         onChangeText={(text) => setPassword(text)}
+        secureTextEntry
+        placeholderTextColor="#888"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Confirm Password"
+        value={confirmPassword}
+        onChangeText={(text) => setConfirmPassword(text)}
         secureTextEntry
         placeholderTextColor="#888"
       />

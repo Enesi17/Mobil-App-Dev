@@ -98,6 +98,7 @@ const AddPatient = ({ goToScreen }) => {
       alignItems: 'center',
       padding: 20,
       backgroundColor: '#f2f2f2',
+      marginTop: 50,
     },
     title: {
       fontSize: 32,
